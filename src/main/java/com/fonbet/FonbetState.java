@@ -149,6 +149,8 @@ public class FonbetState {
             // Женский баскетбол по имени команды
             if (t1.contains("(ж)") || t2.contains("(ж)")) continue;
 
+            if (t1.contains("студ") || t2.contains("студ")) continue;
+
             result.add(new BasketballMatch(event, info));
         }
 
@@ -291,7 +293,7 @@ public class FonbetState {
 
         // Проверяем что линия соответствует четверти (< 100 очков)
         double line = parsePt(over.pt);
-        if (line <= 0 || line >= 100) return null;
+        if (line < 15 || line >= 100) return null;
 
         return new QuarterOdds(over.v, under.v, over.pt, line);
     }
