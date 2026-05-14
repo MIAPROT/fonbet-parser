@@ -25,23 +25,20 @@ public class Main {
     // Пауза при ошибке (15 секунд)
     private static final long ERROR_PAUSE_MS   = 15_000;
 
-    // Имя выходного файла
-    private static final String OUTPUT_FILE    = "basketball_snapshots.csv";
-
     private static final DateTimeFormatter DTF =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     public static void main(String[] args) throws Exception {
         System.out.println("=== Fonbet Basketball Parser ===");
-        System.out.println("Output file : " + OUTPUT_FILE);
+        System.out.println("Output files: basketball_q1.csv … basketball_q4.csv");
         System.out.println("Poll interval: " + POLL_INTERVAL_MS / 1000 + "s");
-        System.out.println("Collecting quarters: Q1 (extend in SnapshotCollector.TARGET_QUARTERS)");
+        System.out.println("Collecting quarters: Q1–Q4");
         System.out.println("Press Ctrl+C to stop (pending snapshots will be flushed)");
         System.out.println("=====================================\n");
 
         FonbetClient      client    = new FonbetClient();
         FonbetState       state     = new FonbetState();
-        SnapshotCollector collector = new SnapshotCollector(OUTPUT_FILE);
+        SnapshotCollector collector = new SnapshotCollector();
 
         long version      = 0;
         int  errorCount   = 0;

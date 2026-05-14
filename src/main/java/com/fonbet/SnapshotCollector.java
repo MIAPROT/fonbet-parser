@@ -7,6 +7,7 @@ import com.fonbet.FonbetState.*;
 import com.fonbet.model.FonbetResponse.EventMisc;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.*;
 
 /**
@@ -14,8 +15,8 @@ import java.util.*;
  *
  * За что отвечает:
  *  1. При каждом обновлении состояния ищет активные баскетбольные матчи
- *  2. Для матчей в нужной четверти (по умолчанию Q1) снимает срезы
- *  3. Следит за переходом к следующей четверти — когда Q1 заканчивается,
+ *  2. Для матчей в целевых четвертях (Q1–Q4) снимает срезы
+ *  3. Следит за переходом к следующей четверти — когда четверть заканчивается,
  *     заполняет quarterResult у всех ожидающих срезов и пишет их в файл
  *
  * Логика дедупликации:
@@ -28,10 +29,9 @@ public class SnapshotCollector {
     // Интервал между срезами для одного матча (30 секунд)
     private static final long SNAPSHOT_INTERVAL_MS = 30_000;
 
-    // Номера четвертей, которые мы собираем.
-    // Сейчас Q1, можно добавить 2,3,4 для полного сбора.
+    // Номера четвертей, которые мы собираем (Q1–Q4).
     private static final Set<Integer> TARGET_QUARTERS = new HashSet<>(
-            Collections.singletonList(1)
+            Arrays.asList(1, 2, 3, 4)
     );
 
     // Хранит pending-срезы: (matchId + "_" + quarterNumber) → список срезов
@@ -49,8 +49,8 @@ public class SnapshotCollector {
 
     private final CsvWriter csvWriter;
 
-    public SnapshotCollector(String outputFile) throws IOException {
-        this.csvWriter = new CsvWriter(outputFile);
+    public SnapshotCollector() throws IOException {
+        this.csvWriter = new CsvWriter();
 
         // Shutdown hook — записываем незавершённые срезы при остановке
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {

@@ -4,13 +4,15 @@ import com.fonbet.model.MatchSnapshot;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.*;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
- * Записывает срезы в CSV-файл.
+ * Записывает срезы в CSV-файлы по четвертям (basketball_q1.csv … basketball_q4.csv).
  *
  * Формат строки:
  *   timestamp, match_id, team1, team2, total_score1, total_score2,
@@ -31,13 +33,19 @@ public class CsvWriter {
             "quarter_number,minute," +
             "over_odds,under_odds,line,quarter_result";
 
-    private final String filePath;
     private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    public CsvWriter(String filePath) throws IOException {
-        this.filePath = filePath;
+    public CsvWriter() throws IOException {
+        for (int q = 1; q <= 4; q++) {
+            ensureFileWithHeader(pathForQuarter(q));
+        }
+    }
 
-        // Создаём файл с заголовком если не существует
+    private static String pathForQuarter(int quarterNumber) {
+        return "basketball_q" + quarterNumber + ".csv";
+    }
+
+    private void ensureFileWithHeader(String filePath) throws IOException {
         File file = new File(filePath);
         if (!file.exists()) {
             try (PrintWriter pw = new PrintWriter(
@@ -53,23 +61,38 @@ public class CsvWriter {
 
     /**
      * Записывает список завершённых срезов (с известным quarterResult).
+     * Каждая строка попадает в файл четверти по полю {@link MatchSnapshot#quarterNumber}.
      */
     public synchronized void writeCompleted(List<MatchSnapshot> snapshots) throws IOException {
         if (snapshots == null || snapshots.isEmpty()) return;
 
-        try (PrintWriter pw = new PrintWriter(
-                new OutputStreamWriter(
-                    new FileOutputStream(filePath, true), StandardCharsets.UTF_8))) {
-            for (MatchSnapshot s : snapshots) {
-                pw.println(toCsvLine(s));
-            }
-            pw.flush();
+        Map<Integer, List<MatchSnapshot>> byQuarter = new LinkedHashMap<>();
+        for (MatchSnapshot s : snapshots) {
+            int q = s.quarterNumber;
+            if (q < 1 || q > 4) continue;
+            byQuarter.computeIfAbsent(q, k -> new ArrayList<>()).add(s);
         }
-        System.out.printf("  Written %d snapshots for match %d Q%d (result=%s)%n",
-                snapshots.size(),
-                snapshots.get(0).matchId,
-                snapshots.get(0).quarterNumber,
-                snapshots.get(0).quarterResult);
+
+        for (Map.Entry<Integer, List<MatchSnapshot>> e : byQuarter.entrySet()) {
+            int quarter = e.getKey();
+            List<MatchSnapshot> list = e.getValue();
+            String filePath = pathForQuarter(quarter);
+            try (PrintWriter pw = new PrintWriter(
+                    new OutputStreamWriter(
+                        new FileOutputStream(filePath, true), StandardCharsets.UTF_8))) {
+                for (MatchSnapshot s : list) {
+                    pw.println(toCsvLine(s));
+                }
+                pw.flush();
+            }
+            MatchSnapshot first = list.get(0);
+            System.out.printf("  Written %d snapshots for match %d Q%d (result=%s) → %s%n",
+                    list.size(),
+                    first.matchId,
+                    first.quarterNumber,
+                    first.quarterResult,
+                    new File(filePath).getAbsolutePath());
+        }
     }
 
     /**
